@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HookGraph — Real-time HCS Webhooks for Hedera</title>
+<meta name="description" content="Subscribe to Hedera Consensus Service topics and receive real-time webhook notifications. HMAC-signed, reliable, and fast.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --font-sans:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  --font-mono:'SF Mono',ui-monospace,'Cascadia Code','Fira Code',Menlo,Monaco,Consolas,monospace;
+  --color-bg:#000;
+  --color-surface:#1C1C1E;
+  --color-surface-2:#2C2C2E;
+  --color-surface-3:#3A3A3C;
+  --color-text:#F5F5F7;
+  --color-text-secondary:#98989D;
+  --color-text-tertiary:#636366;
+  --color-border:rgba(255,255,255,0.08);
+  --color-accent:#ffd700;
+  --color-accent-hover:#e6c200;
+  --color-accent-subtle:rgba(255,215,0,0.12);
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --radius-xl:20px;
+  --radius-full:9999px;
+  --shadow-md:0 2px 4px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg:0 4px 8px rgba(0,0,0,0.04),0 8px 24px rgba(0,0,0,0.12);
+  --ease-standard:cubic-bezier(0.25,0.1,0.25,1);
+}
+
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{
+  font-family:var(--font-sans);
+  background:var(--color-bg);
+  color:var(--color-text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.5;
+  font-feature-settings:'kern','liga','calt';
+}
+
+a{color:var(--color-accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+.container{width:100%;max-width:1120px;margin:0 auto;padding:0 20px}
+
+/* NAV */
+nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(0,0,0,0.82);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:0.5px solid var(--color-border);
+}
+nav .container{display:flex;align-items:center;justify-content:space-between;height:56px}
+.nav-brand{font-size:18px;font-weight:700;color:var(--color-text);letter-spacing:-0.02em}
+.nav-brand span{color:var(--color-accent)}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--color-text-secondary);font-size:14px;font-weight:500;transition:color 150ms}
+.nav-links a:hover{color:var(--color-text);text-decoration:none}
+.nav-cta{
+  background:var(--color-accent);color:#000;font-size:13px;font-weight:600;
+  padding:7px 16px;border-radius:var(--radius-full);
+  transition:all 150ms var(--ease-standard);
+}
+.nav-cta:hover{background:var(--color-accent-hover);text-decoration:none;transform:translateY(-1px)}
+
+@media(max-width:640px){
+  .nav-links a:not(.nav-cta){display:none}
+}
+
+/* HERO */
+.hero{padding:100px 0 80px;text-align:center}
+.hero-badge{
+  display:inline-block;font-size:12px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;
+  color:var(--color-accent);background:var(--color-accent-subtle);
+  padding:6px 14px;border-radius:var(--radius-full);margin-bottom:24px;
+}
+.hero h1{
+  font-size:clamp(2rem,5vw+0.5rem,3.5rem);font-weight:800;letter-spacing:-0.03em;
+  line-height:1.1;margin-bottom:20px;
+}
+.hero h1 span{color:var(--color-accent)}
+.hero p{
+  font-size:clamp(1rem,1.2vw+0.5rem,1.25rem);color:var(--color-text-secondary);
+  max-width:560px;margin:0 auto 36px;line-height:1.6;
+}
+.hero-cta{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--color-accent);color:#000;font-size:16px;font-weight:700;
+  padding:14px 32px;border-radius:var(--radius-full);border:none;cursor:pointer;
+  transition:all 200ms var(--ease-standard);
+}
+.hero-cta:hover{background:var(--color-accent-hover);transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,215,0,0.2);text-decoration:none}
+.hero-cta:active{transform:translateY(0) scale(0.98)}
+.hero-cta svg{width:18px;height:18px}
+
+/* SECTION */
+section{padding:80px 0}
+.section-label{
+  font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--color-accent);margin-bottom:12px;text-align:center;
+}
+.section-title{
+  font-size:clamp(1.5rem,3vw,2.25rem);font-weight:700;letter-spacing:-0.02em;
+  text-align:center;margin-bottom:16px;line-height:1.2;
+}
+.section-desc{
+  font-size:16px;color:var(--color-text-secondary);text-align:center;
+  max-width:540px;margin:0 auto 48px;
+}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
+.step{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);padding:32px 24px;text-align:center;
+  transition:transform 300ms var(--ease-standard),box-shadow 300ms var(--ease-standard);
+}
+.step:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.step-icon{
+  width:56px;height:56px;border-radius:var(--radius-md);
+  background:var(--color-accent-subtle);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+}
+.step-icon svg{width:24px;height:24px;color:var(--color-accent)}
+.step-num{
+  font-size:11px;font-weight:700;color:var(--color-accent);
+  letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;
+}
+.step h3{font-size:18px;font-weight:600;margin-bottom:8px}
+.step p{font-size:14px;color:var(--color-text-secondary);line-height:1.5}
+
+/* FEATURES */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.feature{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-lg);padding:28px 24px;
+  transition:transform 300ms var(--ease-standard),box-shadow 300ms var(--ease-standard);
+}
+.feature:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.feature-icon{
+  width:40px;height:40px;border-radius:var(--radius-sm);
+  background:var(--color-accent-subtle);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+}
+.feature-icon svg{width:20px;height:20px;color:var(--color-accent)}
+.feature h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.feature p{font-size:14px;color:var(--color-text-secondary);line-height:1.5}
+
+/* CODE */
+.code-section{background:var(--color-surface);border-radius:var(--radius-xl);border:1px solid var(--color-border);overflow:hidden;max-width:720px;margin:0 auto}
+.code-tabs{display:flex;border-bottom:1px solid var(--color-border);padding:0 4px}
+.code-tab{
+  padding:12px 20px;font-size:13px;font-weight:600;color:var(--color-text-secondary);
+  cursor:pointer;border-bottom:2px solid transparent;transition:all 150ms;
+  background:none;border-top:none;border-left:none;border-right:none;font-family:var(--font-sans);
+}
+.code-tab.active{color:var(--color-accent);border-bottom-color:var(--color-accent)}
+.code-tab:hover{color:var(--color-text)}
+.code-block{display:none;padding:24px;overflow-x:auto}
+.code-block.active{display:block}
+pre{margin:0;font-family:var(--font-mono);font-size:13px;line-height:1.7;color:#e0e0e0;white-space:pre;tab-size:2}
+.hl-comment{color:#636366}
+.hl-string{color:#ffd700}
+.hl-key{color:#98989D}
+.hl-keyword{color:#ff6b9d}
+.hl-number{color:#64D2FF}
+.hl-url{color:#30D158}
+
+/* PRICING */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:start}
+.price-card{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-xl);padding:32px 28px;
+  transition:transform 300ms var(--ease-standard),box-shadow 300ms var(--ease-standard);
+  position:relative;
+}
+.price-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.price-card.featured{border-color:var(--color-accent)}
+.price-card.featured::before{
+  content:'POPULAR';position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:var(--color-accent);color:#000;font-size:11px;font-weight:700;letter-spacing:0.06em;
+  padding:3px 12px;border-radius:var(--radius-full);
+}
+.price-tier{font-size:14px;font-weight:600;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em}
+.price-amount{font-size:40px;font-weight:800;letter-spacing:-0.03em;margin-bottom:4px}
+.price-amount span{font-size:16px;font-weight:500;color:var(--color-text-secondary)}
+.price-desc{font-size:14px;color:var(--color-text-secondary);margin-bottom:24px}
+.price-features{list-style:none;margin-bottom:28px}
+.price-features li{
+  font-size:14px;padding:8px 0;border-bottom:1px solid var(--color-border);
+  display:flex;align-items:center;gap:10px;
+}
+.price-features li:last-child{border-bottom:none}
+.price-features li::before{
+  content:'';width:16px;height:16px;border-radius:50%;flex-shrink:0;
+  background:var(--color-accent-subtle);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23ffd700' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:center;
+}
+.price-btn{
+  display:block;width:100%;padding:12px;border-radius:var(--radius-full);
+  font-size:15px;font-weight:600;text-align:center;cursor:pointer;
+  border:1.5px solid var(--color-border);background:transparent;color:var(--color-text);
+  transition:all 150ms var(--ease-standard);font-family:var(--font-sans);
+}
+.price-btn:hover{border-color:var(--color-accent);color:var(--color-accent);text-decoration:none}
+.price-btn.primary{
+  background:var(--color-accent);color:#000;border-color:var(--color-accent);
+}
+.price-btn.primary:hover{background:var(--color-accent-hover);border-color:var(--color-accent-hover)}
+
+/* CTA / SIGNUP */
+.cta-section{text-align:center}
+.cta-box{
+  background:var(--color-surface);border:1px solid var(--color-border);
+  border-radius:var(--radius-xl);padding:48px 32px;max-width:560px;margin:0 auto;
+}
+.cta-box h2{font-size:24px;font-weight:700;margin-bottom:8px}
+.cta-box p{font-size:15px;color:var(--color-text-secondary);margin-bottom:28px}
+.cta-form{display:flex;gap:12px;max-width:400px;margin:0 auto}
+.cta-form input{
+  flex:1;padding:12px 16px;border-radius:var(--radius-full);
+  border:1px solid var(--color-border);background:var(--color-surface-2);
+  color:var(--color-text);font-size:15px;font-family:var(--font-sans);
+  outline:none;transition:border-color 150ms;min-width:0;
+}
+.cta-form input::placeholder{color:var(--color-text-tertiary)}
+.cta-form input:focus{border-color:var(--color-accent)}
+.cta-form button{
+  padding:12px 24px;border-radius:var(--radius-full);
+  background:var(--color-accent);color:#000;font-size:15px;font-weight:600;
+  border:none;cursor:pointer;white-space:nowrap;font-family:var(--font-sans);
+  transition:all 150ms var(--ease-standard);
+}
+.cta-form button:hover{background:var(--color-accent-hover)}
+@media(max-width:480px){.cta-form{flex-direction:column}}
+
+/* FOOTER */
+footer{
+  border-top:1px solid var(--color-border);padding:40px 0;margin-top:40px;
+}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.footer-brand{font-size:14px;color:var(--color-text-secondary)}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:14px;color:var(--color-text-secondary);transition:color 150ms}
+.footer-links a:hover{color:var(--color-text);text-decoration:none}
+
+/* ANIMATIONS */
+.animate-on-scroll{opacity:0;transform:translateY(24px);transition:opacity 0.6s ease,transform 0.6s ease}
+.animate-on-scroll.visible{opacity:1;transform:translateY(0)}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a href="#" class="nav-brand">Hook<span>Graph</span></a>
+    <div class="nav-links">
+      <a href="#how-it-works">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#get-started" class="nav-cta">Get API Key</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="animate-on-scroll">
+      <div class="hero-badge">HCS Webhook Service for Hedera</div>
+      <h1>Real-time HCS webhooks<br>for <span>Hedera</span></h1>
+      <p>Subscribe to Hedera Consensus Service topics and receive instant webhook notifications. Cryptographically signed, reliable, and built for production.</p>
+      <a href="#get-started" class="hero-cta">
+        Get API Key
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="how-it-works">
+  <div class="container">
+    <div class="animate-on-scroll">
+      <div class="section-label">How It Works</div>
+      <div class="section-title">Three steps to real-time HCS data</div>
+      <div class="section-desc">No infrastructure to manage. Subscribe to a topic and start receiving webhooks in minutes.</div>
+    </div>
+    <div class="steps">
+      <div class="step animate-on-scroll">
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="step-num">Step 1</div>
+        <h3>Subscribe to Topics</h3>
+        <p>Register your webhook URL and the HCS topic IDs you want to monitor via a simple REST API call.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="step-num">Step 2</div>
+        <h3>HookGraph Polls HCS</h3>
+        <p>Our service continuously monitors the Hedera mirror network for new messages on your subscribed topics.</p>
+      </div>
+      <div class="step animate-on-scroll">
+        <div class="step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </div>
+        <div class="step-num">Step 3</div>
+        <h3>Your App Gets Webhooks</h3>
+        <p>New messages are delivered to your endpoint as signed HTTP POST requests with full message data.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <div class="animate-on-scroll">
+      <div class="section-label">Features</div>
+      <div class="section-title">Built for production workloads</div>
+      <div class="section-desc">Everything you need to reliably consume HCS data without running your own infrastructure.</div>
+    </div>
+    <div class="features-grid">
+      <div class="feature animate-on-scroll">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3>HMAC-SHA256 Signatures</h3>
+        <p>Every webhook is signed with your secret key so you can verify authenticity and prevent tampering.</p>
+      </div>
+      <div class="feature animate-on-scroll">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        </div>
+        <h3>Retry with Exponential Backoff</h3>
+        <p>Failed deliveries are automatically retried with increasing delays, ensuring no messages are lost.</p>
+      </div>
+      <div class="feature animate-on-scroll">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </div>
+        <h3>Message Filtering</h3>
+        <p>Filter messages by content patterns before delivery. Only receive the data your application needs.</p>
+      </div>
+      <div class="feature animate-on-scroll">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Real-Time Delivery</h3>
+        <p>Messages are detected and forwarded within seconds of appearing on the Hedera mirror network.</p>
+      </div>
+      <div class="feature animate-on-scroll">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>REST API</h3>
+        <p>Manage subscriptions, view delivery history, and configure webhooks through a clean JSON API.</p>
+      </div>
+      <div class="feature animate-on-scroll">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Multiple Provider Failover</h3>
+        <p>Automatically switches between Hedera mirror nodes to maintain uptime if a provider goes down.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="code">
+  <div class="container">
+    <div class="animate-on-scroll">
+      <div class="section-label">Quick Start</div>
+      <div class="section-title">Up and running in three requests</div>
+      <div class="section-desc">Create an API key, subscribe to a topic, and start receiving webhooks.</div>
+    </div>
+    <div class="code-section animate-on-scroll">
+      <div class="code-tabs">
+        <button class="code-tab active" data-tab="tab-key">Create Key</button>
+        <button class="code-tab" data-tab="tab-sub">Subscribe</button>
+        <button class="code-tab" data-tab="tab-webhook">Webhook Payload</button>
+      </div>
+      <div class="code-block active" id="tab-key">
+<pre><span class="hl-comment"># Create an API key</span>
+curl -X POST <span class="hl-url">https://hookgraph.com/api/v1/keys</span> \
+  -H <span class="hl-string">"Content-Type: application/json"</span> \
+  -d <span class="hl-string">'{"label": "my-app"}'</span>
+
+<span class="hl-comment"># Response</span>
+{
+  <span class="hl-key">"apiKey"</span>: <span class="hl-string">"hg_a1b2c3d4e5f6..."</span>,
+  <span class="hl-key">"label"</span>: <span class="hl-string">"my-app"</span>,
+  <span class="hl-key">"tier"</span>: <span class="hl-string">"free"</span>
+}</pre>
+      </div>
+      <div class="code-block" id="tab-sub">
+<pre><span class="hl-comment"># Subscribe to an HCS topic</span>
+curl -X POST <span class="hl-url">https://hookgraph.com/api/v1/subscriptions</span> \
+  -H <span class="hl-string">"Authorization: Bearer hg_a1b2c3d4e5f6..."</span> \
+  -H <span class="hl-string">"Content-Type: application/json"</span> \
+  -d <span class="hl-string">'{
+    "topicId": "0.0.123456",
+    "webhookUrl": "https://myapp.com/webhook",
+    "secret": "my-signing-secret"
+  }'</span>
+
+<span class="hl-comment"># Response</span>
+{
+  <span class="hl-key">"id"</span>: <span class="hl-string">"sub_x7y8z9..."</span>,
+  <span class="hl-key">"topicId"</span>: <span class="hl-string">"0.0.123456"</span>,
+  <span class="hl-key">"status"</span>: <span class="hl-string">"active"</span>
+}</pre>
+      </div>
+      <div class="code-block" id="tab-webhook">
+<pre><span class="hl-comment"># Incoming webhook (POST to your URL)</span>
+{
+  <span class="hl-key">"event"</span>: <span class="hl-string">"hcs.message"</span>,
+  <span class="hl-key">"topicId"</span>: <span class="hl-string">"0.0.123456"</span>,
+  <span class="hl-key">"sequenceNumber"</span>: <span class="hl-number">42</span>,
+  <span class="hl-key">"message"</span>: <span class="hl-string">"SGVsbG8gSGVkZXJhIQ=="</span>,
+  <span class="hl-key">"consensusTimestamp"</span>: <span class="hl-string">"1708632145.123456789"</span>,
+  <span class="hl-key">"runningHash"</span>: <span class="hl-string">"a1b2c3d4..."</span>
+}
+
+<span class="hl-comment"># Verify signature</span>
+<span class="hl-comment"># X-HookGraph-Signature header contains</span>
+<span class="hl-comment"># HMAC-SHA256(body, your-secret)</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="container">
+    <div class="animate-on-scroll">
+      <div class="section-label">Pricing</div>
+      <div class="section-title">Simple, transparent pricing</div>
+      <div class="section-desc">Start free. Scale when you need to.</div>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-card animate-on-scroll">
+        <div class="price-tier">Free</div>
+        <div class="price-amount">$0<span> /mo</span></div>
+        <div class="price-desc">Get started with HCS webhooks</div>
+        <ul class="price-features">
+          <li>3 topics</li>
+          <li>500 webhooks per day</li>
+          <li>HMAC-SHA256 signatures</li>
+          <li>Community support</li>
+        </ul>
+        <a href="#get-started" class="price-btn">Get Started</a>
+      </div>
+      <div class="price-card featured animate-on-scroll">
+        <div class="price-tier">Pro</div>
+        <div class="price-amount">$29<span> /mo</span></div>
+        <div class="price-desc">For growing applications</div>
+        <ul class="price-features">
+          <li>Unlimited topics</li>
+          <li>50,000 webhooks per day</li>
+          <li>Priority delivery</li>
+          <li>Message filtering</li>
+          <li>Email support</li>
+        </ul>
+        <a href="#get-started" class="price-btn primary">Get Started</a>
+      </div>
+      <div class="price-card animate-on-scroll">
+        <div class="price-tier">Business</div>
+        <div class="price-amount">$99<span> /mo</span></div>
+        <div class="price-desc">For production workloads</div>
+        <ul class="price-features">
+          <li>Unlimited everything</li>
+          <li>99.9% uptime SLA</li>
+          <li>Dedicated support</li>
+          <li>Custom integrations</li>
+          <li>Provider failover</li>
+        </ul>
+        <a href="#get-started" class="price-btn">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="get-started" class="cta-section">
+  <div class="container">
+    <div class="cta-box animate-on-scroll">
+      <h2>Start building with HookGraph</h2>
+      <p>Enter your email to get an API key and start receiving HCS webhooks in minutes.</p>
+      <form class="cta-form" onsubmit="event.preventDefault();this.querySelector('button').textContent='Check your inbox';this.querySelector('input').disabled=true">
+        <input type="email" placeholder="you@company.com" required>
+        <button type="submit">Get API Key</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">Built by Grave Labs</div>
+      <div class="footer-links">
+        <a href="#">Docs</a>
+        <a href="#">API Reference</a>
+        <a href="https://github.com/NoGraveDev/hookgraph">GitHub</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+
+// Code tabs
+document.querySelectorAll('.code-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.code-block').forEach(b => b.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

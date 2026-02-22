@@ -19,7 +19,11 @@ if (!Number.isFinite(PORT) || PORT < 1 || PORT > 65535) {
   process.exit(1);
 }
 
+const path = require('path');
 const app = express();
+
+// Serve static files from public/
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Body size limit (prevent memory exhaustion)
 app.use(express.json({ limit: '100kb' }));
@@ -65,13 +69,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Info page
-app.get('/', (req, res) => {
+// API info (moved from / since landing page is now served as static)
+app.get('/api/v1', (req, res) => {
   res.json({
     name: 'HookGraph',
     description: 'HCS Webhook Service for Hedera — Subscribe to topics, receive webhooks',
     version: '1.0.0',
-    docs: '/api/v1',
     endpoints: {
       'POST /api/v1/keys': 'Create API key (no auth)',
       'GET /api/v1/account': 'View account & usage',
