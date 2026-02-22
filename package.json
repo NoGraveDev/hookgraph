@@ -1,0 +1,21 @@
+{
+  "name": "hookgraph",
+  "version": "1.0.0",
+  "description": "HCS Webhook Service for Hedera — Subscribe to Consensus Service topics and receive webhook notifications",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "NODE_ENV=test node test/run.js"
+  },
+  "keywords": ["hedera", "hcs", "webhook", "hashgraph", "consensus", "blockchain"],
+  "author": "HookGraph",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "express": "^4.21.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
