@@ -6,9 +6,7 @@
 
 const PROVIDERS = [
   { name: 'hedera-public', base: 'https://mainnet.mirrornode.hedera.com' },
-  // Add Validation Cloud, Hgraph etc:
-  // { name: 'validation-cloud', base: 'https://hedera.validationcloud.io/v1/YOUR_KEY' },
-  // { name: 'hgraph', base: 'https://mainnet.hedera.api.hgraph.io/v1/YOUR_KEY' },
+  { name: 'hgraph', base: 'https://mainnet.hedera.api.hgraph.io/v1/sk_prod_b28c1e7b8411c09e170c986692c9f927eb6322a6' },
 ];
 
 let providerIndex = 0;

@@ -512,4 +512,72 @@ router.post('/subscriptions/:id/test', authenticateRequest, asyncHandler(async (
   }
 }));
 
+/**
+ * GET /api/v1/topic/:topicId/info — Public topic metadata via Hgraph GraphQL
+ */
+router.get('/topic/:topicId/info', asyncHandler(async (req, res) => {
+  const topicId = req.params.topicId;
+  if (!/^\d+\.\d+\.\d+$/.test(topicId)) {
+    return res.status(400).json({ error: 'Invalid topic_id format. Expected: 0.0.XXXXX' });
+  }
+
+  const numericId = parseInt(topicId.split('.')[2], 10);
+  const query = `{
+    topic(where: {topic_id: {_eq: ${numericId}}}) {
+      memo
+      created_timestamp
+      admin_key
+      submit_key
+    }
+    topic_message_aggregate(where: {topic_id: {_eq: ${numericId}}}) {
+      aggregate {
+        count
+      }
+    }
+  }`;
+
+  try {
+    const resp = await fetch('https://mainnet.hedera.api.hgraph.io/v1/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'sk_prod_b28c1e7b8411c09e170c986692c9f927eb6322a6',
+      },
+      body: JSON.stringify({ query }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('[api] Hgraph error:', resp.status, text);
+      return res.status(502).json({ error: 'Hgraph API error' });
+    }
+
+    const data = await resp.json();
+    if (data.errors) {
+      console.error('[api] Hgraph GraphQL errors:', data.errors);
+      return res.status(502).json({ error: 'Hgraph query error', details: data.errors });
+    }
+
+    const topic = data.data?.topic?.[0];
+    if (!topic) {
+      return res.status(404).json({ error: 'Topic not found' });
+    }
+
+    const messageCount = data.data?.topic_message_aggregate?.aggregate?.count ?? null;
+
+    res.json({
+      topic_id: topicId,
+      memo: topic.memo,
+      created_timestamp: topic.created_timestamp,
+      admin_key: topic.admin_key,
+      submit_key: topic.submit_key,
+      message_count: messageCount,
+    });
+  } catch (err) {
+    console.error('[api] Hgraph fetch error:', err.message);
+    res.status(502).json({ error: 'Failed to fetch topic info' });
+  }
+}));
+
 module.exports = router;
